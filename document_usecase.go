@@ -13,35 +13,39 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const maxTokens = 64
+func splitIntoSentences(paragraph string) []string {
+	// Split paragraph into sentences
+	var sentences []string
 
-func splitIntoChunks(paragraph string) []string {
-	// Split paragraph into chunks of maxTokens
-	var chunks []string
-	words := strings.Fields(paragraph)
+	// Split the paragraph into sentences based on common sentence-ending punctuation marks.
+	sentenceDelimiters := []string{".", "!", "?"}
+	paragraph = strings.ReplaceAll(paragraph, "\n", " ") // Remove line breaks
+	paragraph = strings.TrimSpace(paragraph)
+	sentenceParts := strings.FieldsFunc(paragraph, func(r rune) bool {
+		return strings.ContainsRune(sentenceDelimiters[0]+sentenceDelimiters[1]+sentenceDelimiters[2], r)
+	})
 
-	var currentChunk []string
-	currentTokens := 0
+	if len(sentenceParts) == 0 {
+		return []string{paragraph} // Return the whole paragraph if no sentence-ending punctuation is found.
+	}
 
-	for _, word := range words {
-		if currentTokens+len(word)+1 <= maxTokens {
-			currentChunk = append(currentChunk, word)
-			currentTokens += len(word) + 1 // Account for space between words
-		} else {
-			chunks = append(chunks, strings.Join(currentChunk, " "))
-			currentChunk = []string{word}
-			currentTokens = len(word) + 1
+	currentSentence := sentenceParts[0]
+	for i := 1; i < len(sentenceParts); i++ {
+		currentSentence += " " + sentenceParts[i]
+		if strings.ContainsAny(sentenceParts[i], ".!?") {
+			sentences = append(sentences, strings.TrimSpace(currentSentence))
+			currentSentence = ""
 		}
 	}
 
-	if len(currentChunk) > 0 {
-		chunks = append(chunks, strings.Join(currentChunk, " "))
+	if currentSentence != "" {
+		sentences = append(sentences, strings.TrimSpace(currentSentence))
 	}
 
-	return chunks
+	return sentences
 }
 
-func serializeEachParagraph(ctx context.Context, content string, redisClient *redis.Client) error {
+func CorrectingParagraph(ctx context.Context, content string, redisClient *redis.Client) error {
 	// Split content into paragraphs
 	paragraphs := strings.Split(content, "\n")
 
@@ -51,7 +55,7 @@ func serializeEachParagraph(ctx context.Context, content string, redisClient *re
 
 	// Split each paragraph into chunks and store them
 	for _, paragraph := range paragraphs {
-		chunks := splitIntoChunks(paragraph)
+		chunks := splitIntoSentences(paragraph)
 		allChunks = append(allChunks, chunks...)
 		originalParagraphs = append(originalParagraphs, paragraph)
 	}
@@ -84,7 +88,7 @@ func callCorrectionApiOnParagraph(paragraphs []string) (result []string, err err
 	// Prepare prompts for the API call
 	var prompts []string
 	for i, paragraph := range paragraphs {
-		prompts = append(prompts, "correct english of this sentence: "+paragraph+" Corrected sentence:")
+		prompts = append(prompts, "Help me correct english of this sentence remember to only answer with the corrected version of this sentence: "+paragraph+"")
 		// prompts = append(prompts, "correct english of this sentence: "+"hello")
 		if i > 5 {
 			break
