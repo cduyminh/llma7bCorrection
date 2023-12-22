@@ -100,8 +100,6 @@ func callCorrectionApiOnParagraph(paragraphs []string) (result []string, err err
 	urlParams = strings.ReplaceAll(urlParams, " ", "%20")
 	// Make the HTTP request
 	apiURL := fmt.Sprintf("%s?prompts=%s", url, urlParams)
-	log.Println("apiUrl:")
-	log.Println(apiURL)
 	response, err := http.Get(apiURL)
 	if err != nil {
 		return nil, err
@@ -134,12 +132,12 @@ func readAndStoreInRedis(ctx context.Context, redisClient *redis.Client, filePat
 
 	startReadTime := time.Now()
 
-	fileData, err := redisClient.Get(ctx, fileKey).Result()
+	// fileData, err := redisClient.Get(ctx, fileKey).Result()
 	if err == nil {
 		fmt.Println("Reading data from Redis...")
 		// replaceDocx.Editable().SetContent(fileData)
 
-		fmt.Println("File Data:", fileData)
+		// fmt.Println("File Data:", fileData)
 	} else {
 		fmt.Println("Reading data from DOCX file...")
 
