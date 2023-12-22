@@ -117,7 +117,7 @@ func callCorrectionApiOnParagraph(paragraphs []string) (result []string, err err
 	// Parse the result if needed
 	result = strings.Split(string(body), "\n")
 	log.Println("Result:")
-	log.Println(result)
+	log.Println(len(result[0]))
 
 	return result, nil
 }
