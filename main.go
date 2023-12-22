@@ -45,23 +45,31 @@ func main() {
 
 	fmt.Printf("Total time taken: %s\n", elapsedTime)
 
+	router.GET("/document", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Hello world!",
+		})
+	})
+
 	router.POST("/upload", func(c *gin.Context) {
-		// Parse the multipart form
-		err := c.Request.ParseMultipartForm(10 << 20) // 10 MB max memory
+		// Multipart form
+		form, err := c.MultipartForm()
 		if err != nil {
-			c.String(http.StatusBadRequest, "Parse form err: %s", err.Error())
+			c.String(http.StatusBadRequest, "Get form err: %s", err.Error())
 			return
 		}
 
-		// Retrieve the file from the form data
-		file, header, err := c.Request.FormFile("upload[]")
-		if err != nil {
-			c.String(http.StatusBadRequest, "Retrieve file err: %s", err.Error())
-			return
-		}
-		defer file.Close() // Always close the file after processing
+		files := form.File["upload[]"]
 
-		c.String(http.StatusOK, "Processed file: %s", header.Filename)
+		for _, file := range files {
+			// You can now save the file or process it as needed
+			if err := c.SaveUploadedFile(file, file.Filename); err != nil {
+				c.String(http.StatusBadRequest, "Save uploaded file err: %s", err.Error())
+				return
+			}
+		}
+
+		c.String(http.StatusOK, "Uploaded successfully %d files.", len(files))
 	})
 
 	router.Run(":8080")
