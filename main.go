@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/Shopify/sarama"
@@ -25,19 +23,23 @@ func main() {
 	redisClient = GetRedisClient()
 
 	// Initialize Kafka producer
-	producer, err = initKafkaProducer()
-	if err != nil {
-		log.Fatalf("Error initializing Kafka producer: %v", err)
-	}
+	// producer, err = initKafkaProducer()
+	// if err != nil {
+	// 	log.Fatalf("Error initializing Kafka producer: %v", err)
+	// }
 
-	// Create a Kafka consumer
-	consumer, err := initKafkaConsumer()
-	if err != nil {
-		log.Fatalf("Error initializing Kafka consumer: %v", err)
-	}
-	defer consumer.Close()
+	// // Create a Kafka consumer
+	// consumer, err := initKafkaConsumer()
+	// if err != nil {
+	// 	log.Fatalf("Error initializing Kafka consumer: %v", err)
+	// }
+	// defer consumer.Close()
+
+	// Replace this email adress with your own to test
+	emailAddress := "quanmenden2@gmail.com"
 
 	router.POST("/upload", func(c *gin.Context) {
+		fileName := ""
 		// Multipart form
 		form, err := c.MultipartForm()
 		if err != nil {
@@ -56,92 +58,95 @@ func main() {
 				return
 			}
 
-			filePath := "Uploaded_" + file.Filename
-			doc, err := ReadDocxFile(filePath)
-			if err != nil {
-				panic(err)
-			}
-			content := doc.Editable().rawContent
-			// CorrectingParagraph(ctx, content, redisClient)
-			// Send the content to Kafka for asynchronous processing
-			go sendContentToKafka(ctx, content)
-			// Consume messages from the Kafka topic
-			consumeMessages(consumer)
+			fileName = file.Filename
+			// filePath := "Uploaded_" + file.Filename
+			// doc, err := ReadDocxFile(filePath)
+			// if err != nil {
+			// 	panic(err)
+			// }
+			// content := doc.Editable().rawContent
+			// // CorrectingParagraph(ctx, content, redisClient)
+			// // Send the content to Kafka for asynchronous processing
+			// go sendContentToKafka(ctx, content)
+			// // Consume messages from the Kafka topic
+			// consumeMessages(consumer)
 		}
 
 		c.String(http.StatusOK, "Uploaded successfully %d files.", len(files))
+		// Send the email
+		SendEmail([]string{emailAddress}, "Uploaded_"+fileName)
 	})
 
 	router.Run(":8080")
 }
 
-func initKafkaConsumer() (sarama.Consumer, error) {
-	config := sarama.NewConfig()
-	consumer, err := sarama.NewConsumer([]string{"localhost:9092"}, config)
-	if err != nil {
-		return nil, fmt.Errorf("error initializing Kafka consumer: %v", err)
-	}
-	return consumer, nil
-}
+// func initKafkaConsumer() (sarama.Consumer, error) {
+// 	config := sarama.NewConfig()
+// 	consumer, err := sarama.NewConsumer([]string{"localhost:9092"}, config)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error initializing Kafka consumer: %v", err)
+// 	}
+// 	return consumer, nil
+// }
 
-func consumeMessages(consumer sarama.Consumer) {
-	// Change the topic name to match the one you used for producing messages
-	topic := "content-topic"
+// func consumeMessages(consumer sarama.Consumer) {
+// 	// Change the topic name to match the one you used for producing messages
+// 	topic := "content-topic"
 
-	// Create a partition consumer for the topic
-	partitionConsumer, err := consumer.ConsumePartition(topic, 0, sarama.OffsetNewest)
-	if err != nil {
-		log.Fatalf("Error creating partition consumer: %v", err)
-	}
-	defer partitionConsumer.Close()
+// 	// Create a partition consumer for the topic
+// 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, sarama.OffsetNewest)
+// 	if err != nil {
+// 		log.Fatalf("Error creating partition consumer: %v", err)
+// 	}
+// 	defer partitionConsumer.Close()
 
-	log.Printf("Consumer started for topic: %s", topic)
+// 	log.Printf("Consumer started for topic: %s", topic)
 
-	for {
-		select {
-		case msg := <-partitionConsumer.Messages():
-			// Process the received message
-			go processKafkaMessage(msg)
-		case err := <-partitionConsumer.Errors():
-			log.Printf("Error consuming message: %v", err)
-		}
-	}
-}
+// 	for {
+// 		select {
+// 		case msg := <-partitionConsumer.Messages():
+// 			// Process the received message
+// 			go processKafkaMessage(msg)
+// 		case err := <-partitionConsumer.Errors():
+// 			log.Printf("Error consuming message: %v", err)
+// 		}
+// 	}
+// }
 
-func processKafkaMessage(msg *sarama.ConsumerMessage) {
-	content := string(msg.Value)
+// func processKafkaMessage(msg *sarama.ConsumerMessage) {
+// 	content := string(msg.Value)
 
-	// Call the CorrectingParagraph function to process the content
-	err := CorrectingParagraph(ctx, content, redisClient)
-	if err != nil {
-		log.Printf("Error processing message: %v", err)
-	}
-}
+// 	// Call the CorrectingParagraph function to process the content
+// 	err := CorrectingParagraph(ctx, content, redisClient)
+// 	if err != nil {
+// 		log.Printf("Error processing message: %v", err)
+// 	}
+// }
 
-func initKafkaProducer() (sarama.SyncProducer, error) {
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	config.Producer.Return.Errors = true
-	config.Producer.RequiredAcks = sarama.WaitForAll
+// func initKafkaProducer() (sarama.SyncProducer, error) {
+// 	config := sarama.NewConfig()
+// 	config.Producer.Return.Successes = true
+// 	config.Producer.Return.Errors = true
+// 	config.Producer.RequiredAcks = sarama.WaitForAll
 
-	brokers := []string{"localhost:9092"} // Update with your Kafka brokers
-	producer, err := sarama.NewSyncProducer(brokers, config)
-	if err != nil {
-		return nil, fmt.Errorf("error initializing Kafka producer: %v", err)
-	}
+// 	brokers := []string{"localhost:9092"} // Update with your Kafka brokers
+// 	producer, err := sarama.NewSyncProducer(brokers, config)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error initializing Kafka producer: %v", err)
+// 	}
 
-	return producer, nil
-}
+// 	return producer, nil
+// }
 
-func sendContentToKafka(ctx context.Context, content string) {
-	// Send the content to Kafka for asynchronous processing
-	message := &sarama.ProducerMessage{
-		Topic: "content-topic", // Change to your Kafka topic
-		Value: sarama.StringEncoder(content),
-	}
+// func sendContentToKafka(ctx context.Context, content string) {
+// 	// Send the content to Kafka for asynchronous processing
+// 	message := &sarama.ProducerMessage{
+// 		Topic: "content-topic", // Change to your Kafka topic
+// 		Value: sarama.StringEncoder(content),
+// 	}
 
-	_, _, err := producer.SendMessage(message)
-	if err != nil {
-		log.Printf("Error sending message to Kafka: %v", err)
-	}
-}
+// 	_, _, err := producer.SendMessage(message)
+// 	if err != nil {
+// 		log.Printf("Error sending message to Kafka: %v", err)
+// 	}
+// }
