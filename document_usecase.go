@@ -17,86 +17,93 @@ type CorrectionResult struct {
 	Corrected string `json:"corrected"`
 }
 
-func SendContentToKafka(ctx context.Context, filename string, fileData []byte) error {
+func SendContentToKafka(ctx context.Context, filename string, email []string, fileData []byte) error {
 	// Assuming op is a properly initialized OrderPlacer instance
-	return op.placeOrder(Cfg.KakaTopic, filename, fileData)
+	return op.placeOrder(Cfg.KakaTopic, filename, email, fileData)
 }
 
-func CorrectingParagraph(docx *Docx, filename string) error {
+func CorrectingParagraph(docx *Docx, filename string) (*bytes.Buffer, error) {
 	// Construct the Redis key using the filename
 	docxKey := "corrected_docx:" + filename
-
 	// Check if the key already exists in Redis
 	exists, err := redisClient.Exists(ctx, docxKey).Result()
 	if err != nil {
-		return fmt.Errorf("error checking Redis for existing key: %v", err)
+		return nil, fmt.Errorf("error checking Redis for existing key: %v", err)
 	}
 
-	// If the key exists, return nil as no further action is needed
+	var buf bytes.Buffer
+
 	if exists > 0 {
-		fmt.Println("File Existed!")
-		return nil
-	}
-
-	contents := ExtractContentBetweenWTags(docx.content)
-	// // Call the correction API on the entire paragraph
-	corrected, err := callCorrectionOpenAiApiOnParagraph(contents)
-	if err != nil {
-		return fmt.Errorf("error calling correction API: %v", err)
-	}
-
-	for _, content := range corrected {
-		// key := "sentence:" + content.Original
-		correction := content.Corrected
-		if correction != "CORRECT" {
-			// Split the original and corrected sentences into words
-			originalWords := strings.Fields(content.Original)
-			correctedWords := strings.Fields(content.Corrected)
-
-			// Check if both sentences have at least one word each
-			if len(originalWords) > 0 && len(correctedWords) > 0 {
-				// Check if the lowercase of the first word of the original matches the lowercase of the first word of the corrected
-				if strings.EqualFold(strings.ToLower(originalWords[0]), strings.ToLower(correctedWords[0])) {
-					// Replace the first word of the corrected with the first word of the original
-					correctedWords[0] = originalWords[0]
-					// Recreate the corrected sentence with the updated first word
-					correction = strings.Join(correctedWords, " ")
-				}
-			}
-
-			// Replace the original text with the corrected text in the DOCX
-			docx.Replace(content.Original, correction, -1)
+		// If the key exists, retrieve the file from Redis
+		docxBytes, err := redisClient.Get(ctx, docxKey).Bytes()
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving DOCX from Redis: %v", err)
 		}
 
-		// // Write the corrected paragraph to Redis
-		// err = redisClient.Set(ctx, key, correction, 0).Err()
-		// if err != nil {
-		// 	return fmt.Errorf("error writing to Redis: %v", err)
-		// }
+		// Write the bytes to the buffer
+		buf.Write(docxBytes)
+		fmt.Println("File Existed! Sending existing file.")
+	} else {
+		contents := ExtractContentBetweenWTags(docx.content)
+		// // Call the correction API on the entire paragraph
+		corrected, err := callCorrectionOpenAiApiOnParagraph(contents)
+		if err != nil {
+			return nil, fmt.Errorf("error calling correction API: %v", err)
+		}
+
+		for _, content := range corrected {
+			// key := "sentence:" + content.Original
+			correction := content.Corrected
+			if correction != "CORRECT" {
+				// Split the original and corrected sentences into words
+				originalWords := strings.Fields(content.Original)
+				correctedWords := strings.Fields(content.Corrected)
+
+				// Check if both sentences have at least one word each
+				if len(originalWords) > 0 && len(correctedWords) > 0 {
+					// Check if the lowercase of the first word of the original matches the lowercase of the first word of the corrected
+					if strings.EqualFold(strings.ToLower(originalWords[0]), strings.ToLower(correctedWords[0])) {
+						// Replace the first word of the corrected with the first word of the original
+						correctedWords[0] = originalWords[0]
+						// Recreate the corrected sentence with the updated first word
+						correction = strings.Join(correctedWords, " ")
+					}
+				}
+
+				// Replace the original text with the corrected text in the DOCX
+				docx.Replace(content.Original, correction, -1)
+			}
+
+			// // Write the corrected paragraph to Redis
+			// err = redisClient.Set(ctx, key, correction, 0).Err()
+			// if err != nil {
+			// 	return fmt.Errorf("error writing to Redis: %v", err)
+			// }
+		}
+
+		// Edge cases
+		docx.Replace("..", ".", -1)
+		docx.Replace("..", "...", -1)
+		docx.Replace(").).", ").", -1)
+		// docx.WriteToFile("./new_result_1.docx")
+		// Once all corrections are applied, write the DOCX to an in-memory buffer
+		var buf bytes.Buffer
+		err = docx.Write(&buf)
+		if err != nil {
+			return nil, fmt.Errorf("error writing DOCX to buffer: %v", err)
+		}
+
+		// Convert the buffer to a byte slice
+		docxBytes := buf.Bytes()
+
+		// Save the byte slice to Redis
+		err = redisClient.Set(ctx, docxKey, docxBytes, 0).Err()
+		if err != nil {
+			return nil, fmt.Errorf("error writing DOCX to Redis: %v", err)
+		}
 	}
 
-	// Edge cases
-	docx.Replace("..", ".", -1)
-	docx.Replace("..", "...", -1)
-	docx.Replace(").).", ").", -1)
-	// docx.WriteToFile("./new_result_1.docx")
-	// Once all corrections are applied, write the DOCX to an in-memory buffer
-	var buf bytes.Buffer
-	err = docx.Write(&buf)
-	if err != nil {
-		return fmt.Errorf("error writing DOCX to buffer: %v", err)
-	}
-
-	// Convert the buffer to a byte slice
-	docxBytes := buf.Bytes()
-
-	// Save the byte slice to Redis
-	err = redisClient.Set(ctx, docxKey, docxBytes, 0).Err()
-	if err != nil {
-		return fmt.Errorf("error writing DOCX to Redis: %v", err)
-	}
-
-	return nil
+	return &buf, nil
 }
 
 func callCorrectionOpenAiApiOnParagraph(paragraphs []string) ([]CorrectionResult, error) {

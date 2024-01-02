@@ -17,11 +17,12 @@ func NewOrderPlacer(p *kafka.Producer, topic string) *OrderPlacer {
 	}
 }
 
-func (op *OrderPlacer) placeOrder(orderType string, filename string, fileData []byte) error {
+func (op *OrderPlacer) placeOrder(orderType string, filename string, email []string, fileData []byte) error {
 	// Create a JSON object with the filename and file data
 	payload := map[string]interface{}{
 		"filename": filename,
 		"data":     fileData,
+		"email":    email,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -63,8 +64,9 @@ func InitKafkaConsumer() {
 		case *kafka.Message:
 			// Parse the JSON object to get filename and file data
 			var payload struct {
-				Filename string `json:"filename"`
-				Data     []byte `json:"data"`
+				Filename string   `json:"filename"`
+				Data     []byte   `json:"data"`
+				Email    []string `json:"email"`
 			}
 			err := json.Unmarshal(e.Value, &payload)
 			if err != nil {
@@ -85,7 +87,14 @@ func InitKafkaConsumer() {
 			// Process the doc as needed
 			fmt.Println("KAFKA: Received and Processing docx - ", payload.Filename)
 
-			CorrectingParagraph(doc.Editable(), payload.Filename)
+			buffer, err := CorrectingParagraph(doc.Editable(), payload.Filename)
+			if err != nil {
+				fmt.Errorf("Error Correcting Paragraph %s\n", err)
+			}
+
+			fmt.Println(len(payload.Email), payload.Email)
+
+			SendEmail(payload.Email, payload.Filename, buffer)
 
 		case *kafka.Error:
 			fmt.Printf("%v\n", e)

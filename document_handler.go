@@ -16,6 +16,11 @@ func UploadFile(c *gin.Context) {
 	}
 
 	files := form.File["upload[]"]
+	emails, ok := form.Value["email"]
+	if !ok || len(emails) == 0 {
+		c.String(http.StatusBadRequest, "Email addresses are required")
+		return
+	}
 
 	for _, fileHeader := range files {
 		file, err := fileHeader.Open()
@@ -33,7 +38,7 @@ func UploadFile(c *gin.Context) {
 		}
 
 		// Send the file data to Kafka
-		err = SendContentToKafka(ctx, fileHeader.Filename, fileData)
+		err = SendContentToKafka(ctx, fileHeader.Filename, emails, fileData)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Error sending to Kafka: %s", err.Error())
 			return
