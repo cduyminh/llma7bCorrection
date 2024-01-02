@@ -23,6 +23,21 @@ func SendContentToKafka(ctx context.Context, filename string, fileData []byte) e
 }
 
 func CorrectingParagraph(docx *Docx, filename string) error {
+	// Construct the Redis key using the filename
+	docxKey := "corrected_docx:" + filename
+
+	// Check if the key already exists in Redis
+	exists, err := redisClient.Exists(ctx, docxKey).Result()
+	if err != nil {
+		return fmt.Errorf("error checking Redis for existing key: %v", err)
+	}
+
+	// If the key exists, return nil as no further action is needed
+	if exists > 0 {
+		fmt.Println("File Existed!")
+		return nil
+	}
+
 	contents := ExtractContentBetweenWTags(docx.content)
 	// // Call the correction API on the entire paragraph
 	corrected, err := callCorrectionOpenAiApiOnParagraph(contents)
@@ -76,7 +91,6 @@ func CorrectingParagraph(docx *Docx, filename string) error {
 	docxBytes := buf.Bytes()
 
 	// Save the byte slice to Redis
-	docxKey := "corrected_docx:" + filename // You might want to have a unique identifier for each docx file
 	err = redisClient.Set(ctx, docxKey, docxBytes, 0).Err()
 	if err != nil {
 		return fmt.Errorf("error writing DOCX to Redis: %v", err)
@@ -84,56 +98,6 @@ func CorrectingParagraph(docx *Docx, filename string) error {
 
 	return nil
 }
-
-// func callCorrectionApiOnParagraph(paragraphs []string) (result []string, err error) {
-// 	// API endpoint URL
-// 	apiURL := "https://trusting-inherently-feline.ngrok-free.app/generate_code"
-
-// 	// Prepare prompts for the API call
-// 	var prompts []string
-// 	maxPrompts := 5 // Set the maximum number of prompts
-
-// 	for i, paragraph := range paragraphs {
-// 		prompts = append(prompts, "Help me correct the spelling errors in this sentence: "+paragraph)
-// 		if i >= maxPrompts-1 {
-// 			break
-// 		}
-// 	}
-
-// 	// Combine prompts into URL parameters
-// 	urlParams := strings.Join(prompts, "&prompts=")
-// 	urlParams = strings.ReplaceAll(urlParams, " ", "%20")
-
-// 	// Construct the final API request URL
-// 	apiURL = fmt.Sprintf("%s?prompts=%s", apiURL, urlParams)
-
-// 	// Make the HTTP request
-// 	response, err := http.Get(apiURL)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer response.Body.Close()
-
-// 	// Read the response body
-// 	body, err := io.ReadAll(response.Body)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// Parse the result if needed (split by newline)
-// 	result = strings.Split(string(body), "\n")
-
-// 	log.Printf("URL: %s", apiURL)
-
-// 	log.Printf("Result: %d lines", len(result))
-
-// 	// Print all results
-// 	for i, line := range result {
-// 		fmt.Printf("Result %d: %s\n", i+1, line)
-// 	}
-
-// 	return result, nil
-// }
 
 func callCorrectionOpenAiApiOnParagraph(paragraphs []string) ([]CorrectionResult, error) {
 	// Initialize the OpenAI client with your API token
@@ -232,3 +196,53 @@ func adjustSentence(s string) string {
 	// Trim any remaining leading and trailing spaces
 	return strings.TrimSpace(adjusted)
 }
+
+// func callCorrectionApiOnParagraph(paragraphs []string) (result []string, err error) {
+// 	// API endpoint URL
+// 	apiURL := "https://trusting-inherently-feline.ngrok-free.app/generate_code"
+
+// 	// Prepare prompts for the API call
+// 	var prompts []string
+// 	maxPrompts := 5 // Set the maximum number of prompts
+
+// 	for i, paragraph := range paragraphs {
+// 		prompts = append(prompts, "Help me correct the spelling errors in this sentence: "+paragraph)
+// 		if i >= maxPrompts-1 {
+// 			break
+// 		}
+// 	}
+
+// 	// Combine prompts into URL parameters
+// 	urlParams := strings.Join(prompts, "&prompts=")
+// 	urlParams = strings.ReplaceAll(urlParams, " ", "%20")
+
+// 	// Construct the final API request URL
+// 	apiURL = fmt.Sprintf("%s?prompts=%s", apiURL, urlParams)
+
+// 	// Make the HTTP request
+// 	response, err := http.Get(apiURL)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer response.Body.Close()
+
+// 	// Read the response body
+// 	body, err := io.ReadAll(response.Body)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// Parse the result if needed (split by newline)
+// 	result = strings.Split(string(body), "\n")
+
+// 	log.Printf("URL: %s", apiURL)
+
+// 	log.Printf("Result: %d lines", len(result))
+
+// 	// Print all results
+// 	for i, line := range result {
+// 		fmt.Printf("Result %d: %s\n", i+1, line)
+// 	}
+
+// 	return result, nil
+// }
