@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 	"sync"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -66,9 +63,4 @@ func connectToRedisViaTLS() *redis.Client {
 	})
 
 	return client
-}
-
-func generateFileKey(fileInfo os.FileInfo) string {
-	// Generate a key based on file information
-	return fmt.Sprintf("%s_%d_%s_%s", fileInfo.Name(), fileInfo.Size(), fileInfo.ModTime().Format(time.RFC3339), fileInfo.ModTime().Format(time.RFC3339Nano))
 }

@@ -10,6 +10,8 @@ type Config struct {
 	RedisAdrr              string `mapstructure:"REDIS_ADDR"`
 	RedisUsername          string `mapstructure:"REDIS_USERNAME"`
 	RedisPassword          string `mapstructure:"REDIS_PASSWORD"`
+	OpenApiKey             string `mapstructure:"OPEN_API_KEY"`
+	KakaTopic              string `mapstructure:"KAFKA_TOPIC"`
 }
 
 var Cfg *Config
