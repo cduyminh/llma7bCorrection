@@ -5,8 +5,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
@@ -26,6 +29,25 @@ type OrderPlacer struct {
 func main() {
 	InitConfig(".")
 	router := gin.Default()
+	// CORS middleware configuration
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"http://localhost:5173", "http://localhost:3000", "https://correction-ui.vercel.app/"}, // Or set to your specific domain e.g. https://example.com
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{
+			"Content-Length",
+			"Content-Type",
+			"Access-Control-Allow-Headers",
+			"Access-Control-Allow-Origin",
+			"Origin",
+			"Accept-Encoding",
+			"X-CSRF-Token",
+			"Authorization",
+			"*",
+		},
+		ExposeHeaders:    []string{"Content-Length", "Content-Disposition"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 	ctx = context.Background()
 	redisClient = GetRedisClient()
 
@@ -47,9 +69,22 @@ func main() {
 	}()
 
 	// Preview()
+	router.GET("/status_update", StatusUpdate)
 	router.POST("/upload", UploadFile)
 
 	router.Run(":8080")
+}
+
+func UpdateStatusToRedis(emails []string, filename string, statusValue int) error {
+	emailKeyPart := strings.Join(emails, ":")
+	docxKey := "status:" + emailKeyPart + ":" + filename
+	// Save the byte slice to Redis
+	err := redisClient.Set(ctx, docxKey, statusValue, time.Hour*12).Err()
+	if err != nil {
+		return fmt.Errorf("error writing DOCX to Redis: %v", err)
+	}
+
+	return nil
 }
 
 func Preview() {

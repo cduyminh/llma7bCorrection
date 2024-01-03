@@ -22,13 +22,13 @@ func SendContentToKafka(ctx context.Context, filename string, email []string, fi
 	return op.placeOrder(Cfg.KakaTopic, filename, email, fileData)
 }
 
-func CorrectingParagraph(docx *Docx, filename string) (*bytes.Buffer, error) {
+func CorrectingParagraph(docx *Docx, filename string, email []string) error {
 	// Construct the Redis key using the filename
 	docxKey := "corrected_docx:" + filename
 	// Check if the key already exists in Redis
 	exists, err := redisClient.Exists(ctx, docxKey).Result()
 	if err != nil {
-		return nil, fmt.Errorf("error checking Redis for existing key: %v", err)
+		return fmt.Errorf("error checking Redis for existing key: %v", err)
 	}
 
 	var buf bytes.Buffer
@@ -37,21 +37,24 @@ func CorrectingParagraph(docx *Docx, filename string) (*bytes.Buffer, error) {
 		// If the key exists, retrieve the file from Redis
 		docxBytes, err := redisClient.Get(ctx, docxKey).Bytes()
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving DOCX from Redis: %v", err)
+			return fmt.Errorf("error retrieving DOCX from Redis: %v", err)
 		}
 
 		// Write the bytes to the buffer
 		buf.Write(docxBytes)
+		UpdateStatusToRedis(email, filename, 90)
 		fmt.Println("File Existed! Sending existing file.")
 	} else {
 		contents := ExtractContentBetweenWTags(docx.content)
 		// // Call the correction API on the entire paragraph
 		corrected, err := callCorrectionOpenAiApiOnParagraph(contents)
 		if err != nil {
-			return nil, fmt.Errorf("error calling correction API: %v", err)
+			return fmt.Errorf("error calling correction API: %v", err)
 		}
 
-		for _, content := range corrected {
+		progressStep := 60 / len(corrected)
+
+		for index, content := range corrected {
 			// key := "sentence:" + content.Original
 			correction := content.Corrected
 			if correction != "CORRECT" {
@@ -74,6 +77,8 @@ func CorrectingParagraph(docx *Docx, filename string) (*bytes.Buffer, error) {
 				docx.Replace(content.Original, correction, -1)
 			}
 
+			UpdateStatusToRedis(email, filename, 21+progressStep*index)
+
 			// // Write the corrected paragraph to Redis
 			// err = redisClient.Set(ctx, key, correction, 0).Err()
 			// if err != nil {
@@ -87,10 +92,9 @@ func CorrectingParagraph(docx *Docx, filename string) (*bytes.Buffer, error) {
 		docx.Replace(").).", ").", -1)
 		// docx.WriteToFile("./new_result_1.docx")
 		// Once all corrections are applied, write the DOCX to an in-memory buffer
-		var buf bytes.Buffer
 		err = docx.Write(&buf)
 		if err != nil {
-			return nil, fmt.Errorf("error writing DOCX to buffer: %v", err)
+			return fmt.Errorf("error writing DOCX to buffer: %v", err)
 		}
 
 		// Convert the buffer to a byte slice
@@ -99,11 +103,13 @@ func CorrectingParagraph(docx *Docx, filename string) (*bytes.Buffer, error) {
 		// Save the byte slice to Redis
 		err = redisClient.Set(ctx, docxKey, docxBytes, 0).Err()
 		if err != nil {
-			return nil, fmt.Errorf("error writing DOCX to Redis: %v", err)
+			return fmt.Errorf("error writing DOCX to Redis: %v", err)
 		}
 	}
+	UpdateStatusToRedis(email, filename, 100)
+	SendEmail(email, filename, &buf)
 
-	return &buf, nil
+	return nil
 }
 
 func callCorrectionOpenAiApiOnParagraph(paragraphs []string) ([]CorrectionResult, error) {

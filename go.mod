@@ -5,6 +5,12 @@ go 1.20
 require github.com/spf13/viper v1.18.2
 
 require (
+	github.com/gin-contrib/cors v1.5.0 // indirect
+	github.com/go-redis/redis v6.15.9+incompatible // indirect
+	github.com/redis/go-redis v6.15.9+incompatible // indirect
+)
+
+require (
 	github.com/Shopify/sarama v1.29.1 // indirect
 	github.com/adrg/strutil v0.3.1 // indirect
 	github.com/adrg/sysfont v0.1.2 // indirect
@@ -86,7 +92,7 @@ require (
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

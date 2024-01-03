@@ -86,15 +86,9 @@ func InitKafkaConsumer() {
 
 			// Process the doc as needed
 			fmt.Println("KAFKA: Received and Processing docx - ", payload.Filename)
+			UpdateStatusToRedis(payload.Email, payload.Filename, 20)
 
-			buffer, err := CorrectingParagraph(doc.Editable(), payload.Filename)
-			if err != nil {
-				fmt.Errorf("Error Correcting Paragraph %s\n", err)
-			}
-
-			fmt.Println(len(payload.Email), payload.Email)
-
-			SendEmail(payload.Email, payload.Filename, buffer)
+			CorrectingParagraph(doc.Editable(), payload.Filename, payload.Email)
 
 		case *kafka.Error:
 			fmt.Printf("%v\n", e)
