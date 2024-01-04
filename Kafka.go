@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
@@ -88,7 +89,14 @@ func InitKafkaConsumer() {
 			fmt.Println("KAFKA: Received and Processing docx - ", payload.Filename)
 			UpdateStatusToRedis(payload.Email, payload.Filename, 20)
 
-			CorrectingParagraph(doc.Editable(), payload.Filename, payload.Email)
+			wordcount := len(strings.Fields(doc.Editable().rawContent))
+
+			if wordcount > 500 {
+				fmt.Println("File Over 500 words - Returning Error")
+				UpdateStatusToRedis(payload.Email, payload.Filename, -404)
+			} else {
+				CorrectingParagraph(doc.Editable(), payload.Filename, payload.Email)
+			}
 
 		case *kafka.Error:
 			fmt.Printf("%v\n", e)
