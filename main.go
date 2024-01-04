@@ -31,7 +31,7 @@ func main() {
 	router := gin.Default()
 	// CORS middleware configuration
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"http://localhost:5173", "http://localhost:3000", "https://correction-ui.vercel.app/"}, // Or set to your specific domain e.g. https://example.com
+		AllowOrigins: []string{"http://localhost:5173", "http://localhost:3000", "https://correction-ui.vercel.app"}, // Or set to your specific domain e.g. https://example.com
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{
 			"Content-Length",
