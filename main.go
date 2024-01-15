@@ -68,6 +68,8 @@ func main() {
 		InitKafkaConsumer()
 	}()
 
+	OAuthHandler()
+
 	// Preview()
 	router.GET("/status_update", StatusUpdate)
 	router.POST("/upload", UploadFile)

@@ -2,12 +2,25 @@ module golangApi
 
 go 1.20
 
-require github.com/spf13/viper v1.18.2
+require (
+	github.com/gin-contrib/cors v1.5.0
+	github.com/gorilla/pat v1.0.2
+	github.com/gorilla/sessions v1.2.1
+	github.com/markbates/goth v1.78.0
+	github.com/spf13/viper v1.18.2
+)
 
 require (
-	github.com/gin-contrib/cors v1.5.0 // indirect
+	cloud.google.com/go/compute v1.23.3 // indirect
+	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/gorilla/context v1.1.2 // indirect
+	github.com/gorilla/mux v1.8.1 // indirect
+	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/redis/go-redis v6.15.9+incompatible // indirect
+	golang.org/x/oauth2 v0.15.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
 )
 
 require (
@@ -19,7 +32,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
 	github.com/chenzhuoyu/iasm v0.9.1 // indirect
-	github.com/confluentinc/confluent-kafka-go v1.9.2 // indirect
+	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/eapache/go-resiliency v1.2.0 // indirect
@@ -28,7 +41,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/gin-gonic/gin v1.9.1 // indirect
+	github.com/gin-gonic/gin v1.9.1
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.16.0 // indirect
@@ -60,11 +73,11 @@ require (
 	github.com/plandem/xlsx v1.0.4 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/redis/go-redis/v9 v9.3.0 // indirect
+	github.com/redis/go-redis/v9 v9.3.0
 	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
-	github.com/sashabaranov/go-openai v1.17.9 // indirect
+	github.com/sashabaranov/go-openai v1.17.9
 	github.com/segmentio/kafka-go v0.4.46 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
