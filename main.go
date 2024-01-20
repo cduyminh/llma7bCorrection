@@ -52,7 +52,7 @@ func main() {
 	redisClient = GetRedisClient()
 
 	p, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": "localhost:9092",
+		"bootstrap.servers": "broker:29092",
 		"client.id":         "foo",
 		"acks":              "all",
 	})

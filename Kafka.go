@@ -46,7 +46,7 @@ func (op *OrderPlacer) placeOrder(orderType string, filename string, email []str
 
 func InitKafkaConsumer() {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": "localhost:9092",
+		"bootstrap.servers": "broker:29092",
 		"group.id":          "foo",
 		"auto.offset.reset": "smallest",
 	})
